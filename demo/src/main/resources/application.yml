@@ -13,14 +13,23 @@ spring:
     password: root
   jackson:
     time-zone: Asia/Shanghai
-    date-format: yyyy-MM-dd HH:mm:ss
+  sql:
+    init:
+      # 启动时自动建表（schema.sql 用了 IF NOT EXISTS，可重复执行）
+      mode: always
+      schema-locations: classpath:db/schema.sql
+      continue-on-error: true
   servlet:
     multipart:
       max-file-size: 10MB
       max-request-size: 20MB
 
+# JWT 配置
+jwt:
+  secret: lab-reserve-system-jwt-secret-key-please-change-this-2026
+  expiration: 86400000   # 24 小时（毫秒）
+
 mybatis-plus:
-  # 自定义 SQL 的 XML 位置（BaseMapper 自带 CRUD 不需要 XML）
   mapper-locations: classpath*:mapper/**/*.xml
   type-aliases-package: backend.demo.entity
   configuration:
@@ -31,12 +40,7 @@ mybatis-plus:
   global-config:
     banner: false
     db-config:
-      # 主键自增
       id-type: auto
-      # 逻辑删除：实体里需要有 deleted 字段（或用 @TableLogic 标注）才会生效
-      # logic-delete-field: deleted
-      # logic-delete-value: 1
-      # logic-not-delete-value: 0
 
 logging:
   level:
