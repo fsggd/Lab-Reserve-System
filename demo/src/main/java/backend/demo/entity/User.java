@@ -8,7 +8,7 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 /**
- * 用户实体（示例，对应数据库表 sys_user，后续按需修改）
+ * 用户实体，对应表 sys_user
  */
 @Data
 @TableName("sys_user")
@@ -19,12 +19,16 @@ public class User {
 
     private String username;
 
+    /** BCrypt 密文，禁止直接返回给前端 */
     private String password;
 
-    private String name;
+    /** 真实姓名 */
+    private String realName;
 
-    /** 角色：0-学生 1-教师 2-管理员 */
-    private Integer role;
+    /** STUDENT / ADMIN / SUPER_ADMIN */
+    private String role;
+
+    private String phone;
 
     private LocalDateTime createTime;
 }
