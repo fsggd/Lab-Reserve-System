@@ -1,8 +1,8 @@
-# 前后端接口契约 v1.0（已确认 · 可据此开发）
+# 前后端接口契约 v1.1（已冻结）
 
-> 负责人：成员 B（前端）　状态：**三项范围决策已于 2026-10-26 确认，契约冻结**
+> 负责人：成员 B（前端）　状态：**全部待确认项已于 2026-11-02 关闭，契约冻结**
 > 契约一旦冻结，任何字段变更需在群里同步 + 提 PR 修改本文件，避免口头约定导致返工。
-> 已确认决策见第 5 节。
+> 已确认决策见第 5 节，版本变更见文末「变更记录」。
 
 ## 0. 通用约定
 
@@ -12,7 +12,7 @@
 | 认证方式 | `Authorization: Bearer <jwt>`，除 `/auth/login` 外所有接口必带 |
 | 请求格式 | `Content-Type: application/json` |
 | 统一返回体 | `{ "code": 200, "message": "OK", "data": <任意> }` |
-| 分页约定 | `data = { list: [], total: 100 }`，入参 `pageNum` 从 1 开始、`pageSize` 默认 10 |
+| 分页约定 | **所有列表接口统一返回 `data = { list: [], total: 100 }`**（不存在裸数组形式）；入参 `pageNum` 从 1 开始、`pageSize` 默认 10 |
 | 时间格式 | 统一字符串 `yyyy-MM-dd HH:mm:ss`（前端不做时区转换） |
 
 ### code 定义（前端已按此处理）
@@ -26,7 +26,8 @@
 | **409** | **预约时间冲突** | 提示"时间冲突：xxx"（本项目核心校验） |
 | 500 | 服务器异常 | 提示"服务器开小差了" |
 
-> 请 A 确认：401 除了返回 `code:401`，HTTP 状态码是否也返回 401？前端两种都已兼容。
+> **已确认（2026-11-02，A 答复）**：后端统一返回 **HTTP 200 + `code:401`**（业务码，非 HTTP 状态码）。
+> 前端 `src/utils/request.js` 对"HTTP 401"与"HTTP 200 + code:401"两种形态均已兼容（清 token → 提示 → 跳登录页）。
 
 ---
 
@@ -72,7 +73,7 @@
 | # | 方法 | 路径 | 请求体 / 参数 | 返回 data | 备注 |
 |---|---|---|---|---|---|
 | 9 | GET | `/bookings` | `status?`, `instrumentId?`, `userName?`, `pageNum`, `pageSize` | `{ list: [booking], total }` | 管理员看全部 |
-| 10 | GET | `/bookings/mine` | 同上 | `{ list, total }` 或 `list` | 学生看自己的 |
+| 10 | GET | `/bookings/mine` | 同上 | `{ list, total }` | 学生看自己的；**与第 9 条结构完全一致**，分页入参同为 `pageNum` / `pageSize` |
 | 11 | POST | `/bookings` | `{ instrumentId, startTime, endTime, purpose }` | `{ id }` | **时间重叠时返回 409** |
 | 12 | POST | `/bookings/{id}/approve` | - | `true` | 仅管理员 |
 | 13 | POST | `/bookings/{id}/reject` | `{ reason }` | `true` | **reason 必填**，仅管理员 |
@@ -134,3 +135,4 @@
 |---|---|---|---|
 | 2026-10-25 | v0.1 | 成员 B | 初稿，依据需求文档与前端页面需要整理 |
 | 2026-10-26 | v1.0 | 成员 B | 三项范围决策确认：超管等同管理员（无用户管理页）／仪器不返回 availableSlots、冲突走 409／利用率 = 已预约时长 ÷ 可用总时长，只计 APPROVED + COMPLETED。契约冻结 |
+| 2026-11-02 | v1.1 | 成员 B（依 PR 评审意见，评审人 fsggd） | ① 关闭最后一条待确认：后端统一返回 HTTP 200 + `code:401`，前端两种形态均已兼容；② 列表接口结构统一为 `{ list, total }`，删除 `/bookings/mine`「或 `list`」的二义写法；③ 前端 mock 同步改为 `{ list, total }` 并支持 `pageNum`/`pageSize` 分页。至此全部待确认项关闭，契约真正冻结 |

@@ -6,43 +6,51 @@
  *  - 想模拟错误，返回 { status, code, message } 即可
  */
 import { mockUser, mockInstruments, mockBookings, mockStats } from './data'
+import { authenticate, issueToken } from './accounts'
+
+/**
+ * 统一分页：与契约 v1.1 一致，列表接口一律返回 { list, total }
+ * 入参 pageNum 从 1 开始，pageSize 默认 10（见契约第 0 节「分页约定」）
+ */
+function paginate(list, query = {}) {
+  const pageNum = Number(query.pageNum) || 1
+  const pageSize = Number(query.pageSize) || 10
+  const start = (pageNum - 1) * pageSize
+  return { list: list.slice(start, start + pageSize), total: list.length }
+}
 
 export const mockRoutes = [
   // ---------- 认证 ----------
   {
+    // 与契约 v1.0 一致：登录失败返回 400 + 中文 message
     method: 'post',
     path: '/auth/login',
     handler: ({ body }) => {
       const { username, password } = body || {}
-      if (!username || !password) {
-        return { status: 400, code: 400, message: '用户名与密码不能为空' }
+      const result = authenticate(username, password)
+      if (!result.ok) {
+        return { status: 400, code: 400, message: result.message }
       }
-      if (password === 'wrong') {
-        return { status: 400, code: 400, message: '用户名或密码错误' }
-      }
-      const role = username.startsWith('admin')
-        ? 'ADMIN'
-        : username.startsWith('root')
-          ? 'SUPER_ADMIN'
-          : 'STUDENT'
       return {
-        token: `mock-jwt-token.${btoa(unescape(encodeURIComponent(username)))}.${Date.now()}`,
-        user: { ...mockUser, username, role }
+        token: issueToken(result.user.username, result.user.role),
+        user: result.user
       }
     }
   },
   { method: 'get', path: '/auth/profile', handler: () => mockUser },
+  { method: 'post', path: '/auth/logout', handler: () => true },
 
   // ---------- 仪器 ----------
-  { method: 'get', path: '/instruments', handler: () => ({ list: mockInstruments, total: mockInstruments.length }) },
+  { method: 'get', path: '/instruments', handler: ({ query }) => paginate(mockInstruments, query) },
   { method: 'get', path: '/instruments/:id', handler: () => mockInstruments[0] },
   { method: 'post', path: '/instruments', handler: () => ({ id: Date.now() }) },
   { method: 'put', path: '/instruments/:id', handler: () => ({ id: 1 }) },
   { method: 'delete', path: '/instruments/:id', handler: () => true },
 
   // ---------- 预约 ----------
-  { method: 'get', path: '/bookings', handler: () => ({ list: mockBookings, total: mockBookings.length }) },
-  { method: 'get', path: '/bookings/mine', handler: () => mockBookings.slice(0, 5) },
+  { method: 'get', path: '/bookings', handler: ({ query }) => paginate(mockBookings, query) },
+  // 与契约 v1.1 一致：返回 { list, total }（真实接口由后端按 token 过滤本人数据，mock 共用同一批）
+  { method: 'get', path: '/bookings/mine', handler: ({ query }) => paginate(mockBookings, query) },
   { method: 'post', path: '/bookings', handler: () => ({ id: Date.now() }) },
   { method: 'post', path: '/bookings/:id/approve', handler: () => true },
   { method: 'post', path: '/bookings/:id/reject', handler: () => true },

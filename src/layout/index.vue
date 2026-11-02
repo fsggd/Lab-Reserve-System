@@ -54,6 +54,7 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/stores/user'
+import { ROLE_LABEL } from '@/utils/role'
 
 const route = useRoute()
 const router = useRouter()
@@ -70,19 +71,14 @@ const menus = computed(() => {
     .map((r) => ({ path: '/' + r.path, title: r.meta.title, icon: r.meta.icon }))
 })
 
-const roleMap = {
-  STUDENT: { label: '学生', type: '' },
-  ADMIN: { label: '实验室管理员', type: 'success' },
-  SUPER_ADMIN: { label: '超级管理员', type: 'danger' }
-}
-const roleLabel = computed(() => roleMap[userStore.role]?.label || '未知角色')
-const roleTagType = computed(() => roleMap[userStore.role]?.type || 'info')
+const roleLabel = computed(() => ROLE_LABEL[userStore.role]?.label || '未知角色')
+const roleTagType = computed(() => ROLE_LABEL[userStore.role]?.type || 'info')
 
 function onCommand(cmd) {
   if (cmd === 'logout') {
     ElMessageBox.confirm('确认退出登录？', '提示', { type: 'warning' })
       .then(() => {
-        userStore.logout()
+        userStore.logout(true)
         router.replace('/login')
       })
       .catch(() => {})
