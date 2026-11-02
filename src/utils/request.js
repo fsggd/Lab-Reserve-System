@@ -122,6 +122,10 @@ http.interceptors.response.use(
       } else if (!config.silent) {
         toast('error', msg)
       }
+      // 把后端返回的中文 message 写回 error.message：
+      // 静默请求（如登录页 silent 模式）拿到的 e.message 才是可展示文案，
+      // 而不是 axios 默认的 "Request failed with status code xxx"
+      error.message = msg
       return Promise.reject(Object.assign(error, { status }))
     }
 

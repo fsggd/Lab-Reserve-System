@@ -5,8 +5,8 @@
  *  - 每个 handler 返回的对象会被 adapter 包成统一返回体 { code, message, data }
  *  - 想模拟错误，返回 { status, code, message } 即可
  */
-import { mockUser, mockInstruments, mockBookings, mockStats } from './data'
-import { authenticate, issueToken } from './accounts'
+import { mockInstruments, mockBookings, mockStats } from './data'
+import { authenticate, issueToken, userFromToken } from './accounts'
 
 /**
  * 统一分页：与契约 v1.1 一致，列表接口一律返回 { list, total }
@@ -22,14 +22,14 @@ function paginate(list, query = {}) {
 export const mockRoutes = [
   // ---------- 认证 ----------
   {
-    // 与契约 v1.0 一致：登录失败返回 400 + 中文 message
+    // 与契约 v1.1 一致：后端统一 HTTP 200 + code 业务码，登录失败 = HTTP 200 + code:400
     method: 'post',
     path: '/auth/login',
     handler: ({ body }) => {
       const { username, password } = body || {}
       const result = authenticate(username, password)
       if (!result.ok) {
-        return { status: 400, code: 400, message: result.message }
+        return { status: 200, code: 400, message: result.message }
       }
       return {
         token: issueToken(result.user.username, result.user.role),
@@ -37,7 +37,17 @@ export const mockRoutes = [
       }
     }
   },
-  { method: 'get', path: '/auth/profile', handler: () => mockUser },
+  {
+    // 按 token 返回当前登录人（与真实后端行为一致，不再固定返回一个用户）
+    method: 'get',
+    path: '/auth/profile',
+    handler: ({ headers }) =>
+      userFromToken(headers.Authorization) || {
+        status: 200,
+        code: 401,
+        message: '登录状态已失效'
+      }
+  },
   { method: 'post', path: '/auth/logout', handler: () => true },
 
   // ---------- 仪器 ----------
@@ -49,8 +59,16 @@ export const mockRoutes = [
 
   // ---------- 预约 ----------
   { method: 'get', path: '/bookings', handler: ({ query }) => paginate(mockBookings, query) },
-  // 与契约 v1.1 一致：返回 { list, total }（真实接口由后端按 token 过滤本人数据，mock 共用同一批）
-  { method: 'get', path: '/bookings/mine', handler: ({ query }) => paginate(mockBookings, query) },
+  // 与契约 v1.1 一致：返回 { list, total }；mock 同样按 token 过滤本人数据，与真实后端语义对齐
+  {
+    method: 'get',
+    path: '/bookings/mine',
+    handler: ({ query, headers }) => {
+      const user = userFromToken(headers.Authorization)
+      const mine = user ? mockBookings.filter((b) => b.userName === user.realName) : []
+      return paginate(mine, query)
+    }
+  },
   { method: 'post', path: '/bookings', handler: () => ({ id: Date.now() }) },
   { method: 'post', path: '/bookings/:id/approve', handler: () => true },
   { method: 'post', path: '/bookings/:id/reject', handler: () => true },
@@ -63,9 +81,10 @@ export const mockRoutes = [
   { method: 'get', path: '/__test/success', handler: () => ({ hello: 'world', time: Date.now() }) },
   { method: 'get', path: '/__test/biz-error', handler: () => ({ status: 200, code: 500, message: '模拟业务异常' }) },
   { method: 'get', path: '/__test/conflict', handler: () => ({ status: 200, code: 409, message: '该仪器在所选时段已被预约' }) },
-  { method: 'get', path: '/__test/unauthorized', handler: () => ({ status: 401, code: 401, message: '登录状态已失效' }) },
-  { method: 'get', path: '/__test/forbidden', handler: () => ({ status: 403, code: 403, message: '仅管理员可操作' }) },
-  { method: 'get', path: '/__test/server-error', handler: () => ({ status: 500, code: 500, message: 'Internal Server Error' }) },
+  // 以下均按契约 v1.1：HTTP 200 + code 业务码（与真实后端统一）
+  { method: 'get', path: '/__test/unauthorized', handler: () => ({ status: 200, code: 401, message: '登录状态已失效' }) },
+  { method: 'get', path: '/__test/forbidden', handler: () => ({ status: 200, code: 403, message: '仅管理员可操作' }) },
+  { method: 'get', path: '/__test/server-error', handler: () => ({ status: 200, code: 500, message: '服务器内部错误' }) },
   {
     method: 'get',
     path: '/__test/echo-token',

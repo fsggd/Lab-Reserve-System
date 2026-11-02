@@ -57,7 +57,10 @@ export function parseJwt(token) {
   if (!token) return null
   try {
     const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
-    return JSON.parse(window.atob(base64))
+    // 补齐 padding：JWT payload 的 base64 通常省略 "="，长度非 4 的倍数时
+    // atob 会抛异常，导致有效 token 被误判为非法
+    const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=')
+    return JSON.parse(window.atob(padded))
   } catch {
     return null
   }

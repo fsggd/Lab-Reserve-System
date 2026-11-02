@@ -146,7 +146,7 @@ async function onSubmit() {
     router.replace(targetPath())
   } catch (e) {
     // 优先展示后端返回的中文 message，其次给兜底文案
-    errorMsg.value = e?.message || '登录失败，请稍后重试'
+    errorMsg.value = e?.response?.data?.message || e?.message || '登录失败，请稍后重试'
   }
 }
 </script>

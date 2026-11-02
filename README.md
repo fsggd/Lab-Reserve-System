@@ -89,10 +89,12 @@ const { list, total } = await fetchInstruments({ status: 'NORMAL' })
 
 ## 4. Mock 模式
 
-`.env.development` 中 `VITE_USE_MOCK=true` 时，所有请求由 `src/mock/adapter.js` 拦截返回假数据，
-模拟延迟 200ms。**W10 联调时改为 `false` 即可切换到真实后端，业务代码零改动。**
+仓库已自带 `.env.development`（默认 `VITE_USE_MOCK=true`，克隆后无需配置即可跑通）。
+Mock 开启时所有请求由 `src/mock/adapter.js` 拦截返回假数据，模拟延迟 200ms。
+**联调时把 `VITE_USE_MOCK` 改为 `false` 并启动后端即可切换到真实接口，业务代码零改动。**
 
 mock 路由表在 `src/mock/routes.js`，数据与真实接口字段保持一致，页面开发阶段无需等待后端。
+错误形态同样按契约 v1.1 模拟（HTTP 200 + code 业务码），自测结果与联调后一致。
 
 ---
 

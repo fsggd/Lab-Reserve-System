@@ -52,3 +52,21 @@ export function issueToken(username, role) {
       .replace(/\//g, '_')
   return `mock.${encode(payload)}.mock-signature`
 }
+
+/**
+ * 从 Authorization 头解析 mock token，返回对应账号的用户信息。
+ * 找不到有效 token（缺失/损坏/账号不存在）时返回 null。
+ * 供 /auth/profile、/bookings/mine 等"按当前登录人取数据"的接口使用。
+ */
+export function userFromToken(authorization) {
+  const token = (authorization || '').replace(/^Bearer\s+/i, '')
+  try {
+    const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
+    const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=')
+    const payload = JSON.parse(atob(padded))
+    const account = mockAccounts.find((a) => a.username === payload.sub)
+    return account ? { ...account.user } : null
+  } catch {
+    return null
+  }
+}
