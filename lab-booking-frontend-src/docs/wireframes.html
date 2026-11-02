@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>实验室仪器预约系统 · 页面草图 v0.1</title>
+<style>
+  :root {
+    --line: #b9c0cc;
+    --fill: #eef1f6;
+    --fill-2: #e3e8f0;
+    --accent: #409eff;
+    --text: #303133;
+    --muted: #909399;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px;
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: var(--text); background: #f5f7fa;
+  }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .meta { color: var(--muted); font-size: 13px; margin: 0 0 20px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(430px, 1fr)); gap: 18px; }
+  .card { background: #fff; border: 1px solid #e4e7ed; border-radius: 8px; padding: 16px; }
+  .card h2 { font-size: 16px; margin: 0 0 2px; display: flex; align-items: center; gap: 8px; }
+  .tag { font-size: 11px; font-weight: 400; color: var(--accent); background: #ecf5ff;
+         border: 1px solid #d9ecff; border-radius: 10px; padding: 1px 8px; }
+  .who { font-size: 12px; color: var(--muted); margin: 0 0 12px; }
+  .frame { border: 1px dashed var(--line); border-radius: 6px; padding: 12px; background: #fcfcfd; }
+  .notes { margin: 10px 0 0; padding-left: 18px; font-size: 12px; color: #606266; line-height: 1.8; }
+
+  /* 线框元件 */
+  .box { border: 1px solid var(--line); background: var(--fill); border-radius: 4px;
+         display: flex; align-items: center; padding: 0 10px; color: var(--muted); font-size: 12px; }
+  .input { height: 34px; }
+  .btn { height: 34px; background: var(--fill-2); justify-content: center; min-width: 72px; }
+  .btn.primary { background: #d9ecff; border-color: var(--accent); color: var(--accent); }
+  .textarea { height: 68px; align-items: flex-start; padding-top: 8px; }
+  .row { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  .row > .grow { flex: 1; min-width: 90px; }
+  .label { font-size: 12px; color: var(--muted); display: flex; align-items: center; min-width: 56px; }
+  .table { border: 1px solid var(--line); border-radius: 4px; overflow: hidden; margin-top: 8px; }
+  .tr { display: flex; border-bottom: 1px solid #dfe3ea; }
+  .tr:last-child { border-bottom: none; }
+  .th { background: var(--fill-2); font-weight: 600; }
+  .td { flex: 1; padding: 6px 8px; font-size: 11px; color: #7a8089;
+        border-right: 1px solid #dfe3ea; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .td:last-child { border-right: none; }
+  .td.w2 { flex: 2; }
+  .td.act { flex: 0 0 96px; color: var(--accent); }
+  .chart { border: 1px solid var(--line); background:
+      repeating-linear-gradient(45deg, #f4f6f9, #f4f6f9 10px, #eceff4 10px, #eceff4 20px);
+      border-radius: 4px; display: flex; align-items: center; justify-content: center;
+      color: var(--muted); font-size: 12px; margin-top: 8px; }
+  .cards4 { display: flex; gap: 8px; margin-top: 8px; }
+  .kpi { flex: 1; border: 1px solid var(--line); background: var(--fill); border-radius: 4px;
+         height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+         font-size: 11px; color: var(--muted); }
+  .kpi b { font-size: 15px; color: var(--text); }
+  .side { display: flex; gap: 8px; }
+  .nav { flex: 0 0 110px; border: 1px solid var(--line); background: var(--fill); border-radius: 4px;
+         padding: 8px; font-size: 11px; color: var(--muted); }
+  .nav div { padding: 5px 6px; border-radius: 3px; }
+  .nav div.on { background: #d9ecff; color: var(--accent); }
+  .main { flex: 1; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 8px; }
+  .tabs .box { height: 28px; padding: 0 12px; }
+  .tabs .box.on { background: #d9ecff; border-color: var(--accent); color: var(--accent); }
+  .pager { display: flex; justify-content: flex-end; gap: 4px; margin-top: 8px; }
+  .pager .box { height: 26px; min-width: 26px; padding: 0; justify-content: center; }
+  .center { display: flex; justify-content: center; }
+  .login-wrap { max-width: 320px; margin: 0 auto; }
+  .hint { font-size: 11px; color: var(--muted); text-align: center; margin-top: 6px; }
+  @media print { body { background: #fff; } .card { break-inside: avoid; } }
+</style>
+</head>
+<body>
+
+<h1>实验室仪器预约系统 · 页面草图 v0.1</h1>
+<p class="meta">负责人：成员 B（前端 &amp; 交互）　|　日期：2026-10-25　|　状态：待小组评审　|　工具：HTML 线框（可打印/截图存档）</p>
+
+<div class="grid">
+
+  <!-- 1 登录页 -->
+  <section class="card">
+    <h2>1. 登录页 <span class="tag">/login</span></h2>
+    <p class="who">全体用户 · W8 交付</p>
+    <div class="frame">
+      <div class="login-wrap">
+        <div class="center" style="font-size:14px;color:#409eff;margin-bottom:12px">实验室仪器预约系统</div>
+        <div class="row"><div class="box input grow">用户名</div></div>
+        <div class="row"><div class="box input grow">密码</div></div>
+        <div class="row" style="justify-content:space-between">
+          <div class="box" style="height:26px;min-width:80px">☑ 记住我</div>
+          <div class="box" style="height:26px;min-width:80px;color:#409eff">忘记密码？</div>
+        </div>
+        <div class="row"><div class="box btn primary grow">登 录</div></div>
+        <p class="hint">学生 / 实验室管理员 / 超级管理员 同一入口</p>
+      </div>
+    </div>
+    <ul class="notes">
+      <li>校验：用户名 3–20 位、密码 6–20 位，为空或格式错误时输入框下方红字提示</li>
+      <li>登录失败展示后端 message（如"用户名或密码错误"）</li>
+      <li>成功后按 role 跳转：学生→仪器列表，管理员→管理员面板</li>
+      <li>密码 BCrypt 校验在后端，前端只做非空与长度校验</li>
+    </ul>
+  </section>
+
+  <!-- 2 仪器列表 -->
+  <section class="card">
+    <h2>2. 仪器列表 <span class="tag">/instruments</span></h2>
+    <p class="who">全体用户 · W9 交付</p>
+    <div class="frame">
+      <div class="row">
+        <div class="label">名称</div><div class="box input grow">模糊查询</div>
+        <div class="label">状态</div><div class="box input grow">全部 / 正常 / 维修 / 停用</div>
+        <div class="box btn primary">查询</div><div class="box btn">重置</div>
+      </div>
+      <div class="table">
+        <div class="tr th"><div class="td w2">仪器名称</div><div class="td">型号</div><div class="td">位置</div><div class="td">可用时段</div><div class="td">状态</div><div class="td act">操作</div></div>
+        <div class="tr"><div class="td w2">扫描电子显微镜</div><div class="td">SEM-2000</div><div class="td">实验楼A-301</div><div class="td">09:00–18:00</div><div class="td">正常</div><div class="td act">预约 | 详情</div></div>
+        <div class="tr"><div class="td w2">高效液相色谱仪</div><div class="td">HPLC-1260</div><div class="td">实验楼A-302</div><div class="td">08:30–17:30</div><div class="td">正常</div><div class="td act">预约 | 详情</div></div>
+        <div class="tr"><div class="td w2" style="color:#c0c4cc">原子吸收分光光度计</div><div class="td">AAS-900</div><div class="td">实验楼B-201</div><div class="td">09:00–18:00</div><div class="td">维修</div><div class="td act" style="color:#c0c4cc">不可预约</div></div>
+      </div>
+      <div class="pager"><div class="box">‹</div><div class="box">1</div><div class="box">2</div><div class="box">›</div></div>
+    </div>
+    <ul class="notes">
+      <li>状态标签：正常=绿 / 维修=橙 / 停用=灰；非"正常"的预约按钮置灰并给出 tooltip</li>
+      <li>点击"预约"携带 instrumentId 跳转预约表单</li>
+      <li>加载中 el-table v-loading；无结果显示"暂无仪器"</li>
+    </ul>
+  </section>
+
+  <!-- 3 预约表单 -->
+  <section class="card">
+    <h2>3. 预约申请表单 <span class="tag">/booking/create</span></h2>
+    <p class="who">学生 · W9 交付</p>
+    <div class="frame">
+      <div class="row"><div class="label">仪器</div><div class="box input grow">扫描电子显微镜（可从列表带入，支持返回重选）</div></div>
+      <div class="row"><div class="label">时间</div><div class="box input grow">2026-10-26 09:00</div><div class="label" style="min-width:16px">至</div><div class="box input grow">2026-10-26 11:00</div></div>
+      <div class="row"><div class="label">用途</div><div class="box textarea grow" style="height:70px">实验用途说明（5–200 字）</div></div>
+      <div class="row" style="justify-content:flex-end">
+        <div class="box btn">重置</div><div class="box btn primary">提交预约</div>
+      </div>
+      <p class="hint">提交后进入"待审批"，可在「我的预约」查看进度</p>
+    </div>
+    <ul class="notes">
+      <li>校验：仪器必选、结束时间必须晚于开始时间、不能预约过去时间、用途必填 5–200 字</li>
+      <li>时间选择器按仪器 availableStart / availableEnd 限制可选范围</li>
+      <li><b>已确认</b>：不做已占用时段置灰 —— 后端只返回 availableStart / availableEnd，无 availableSlots</li>
+      <li>时间重叠由后端校验，返回 409，前端统一提示"时间冲突：该仪器在所选时段已被预约"（唯一冲突反馈途径）</li>
+    </ul>
+  </section>
+
+  <!-- 4 我的预约 -->
+  <section class="card">
+    <h2>4. 我的预约 <span class="tag">/my-bookings</span></h2>
+    <p class="who">学生 · W9 交付</p>
+    <div class="frame">
+      <div class="row">
+        <div class="label">状态</div>
+        <div class="box" style="height:30px;min-width:56px">全部</div>
+        <div class="box" style="height:30px;min-width:56px">待审批</div>
+        <div class="box" style="height:30px;min-width:56px">已通过</div>
+        <div class="box" style="height:30px;min-width:56px">已驳回</div>
+        <div class="box" style="height:30px;min-width:56px">已完成</div>
+      </div>
+      <div class="table">
+        <div class="tr th"><div class="td w2">仪器</div><div class="td">起止时间</div><div class="td w2">用途</div><div class="td">状态</div><div class="td act">操作</div></div>
+        <div class="tr"><div class="td w2">扫描电子显微镜</div><div class="td">10-26 09:00–11:00</div><div class="td w2">材料表面形貌观察</div><div class="td">待审批</div><div class="td act">取消</div></div>
+        <div class="tr"><div class="td w2">高效液相色谱仪</div><div class="td">10-24 14:00–17:00</div><div class="td w2">药物含量测定</div><div class="td">已通过</div><div class="td act">取消</div></div>
+        <div class="tr"><div class="td w2">冷冻离心机</div><div class="td">10-23 10:00–11:30</div><div class="td w2">血清分离</div><div class="td">已驳回</div><div class="td act" style="color:#e6a23c">看理由</div></div>
+      </div>
+      <div class="pager"><div class="box">‹</div><div class="box">1</div><div class="box">›</div></div>
+    </div>
+    <ul class="notes">
+      <li>驳回理由用 tooltip 展示，避免撑开表格</li>
+      <li>取消需二次确认；已完成/已取消/已驳回不显示取消按钮</li>
+      <li>空数据时引导"去预约仪器"</li>
+    </ul>
+  </section>
+
+  <!-- 5 管理员面板 -->
+  <section class="card">
+    <h2>5. 管理员面板 <span class="tag">/admin</span></h2>
+    <p class="who">管理员 / 超级管理员 · W9 交付</p>
+    <div class="frame">
+      <div class="tabs"><div class="box on">① 预约审批</div><div class="box">② 仪器台账</div></div>
+      <div class="row">
+        <div class="label">状态</div><div class="box input grow">待审批</div>
+        <div class="box btn primary">批量通过</div><div class="box btn">刷新</div>
+      </div>
+      <div class="table">
+        <div class="tr th"><div class="td">申请人</div><div class="td w2">仪器</div><div class="td">时间</div><div class="td w2">用途</div><div class="td act" style="flex:0 0 130px">操作</div></div>
+        <div class="tr"><div class="td">张三</div><div class="td w2">扫描电子显微镜</div><div class="td">10-26 09:00</div><div class="td w2">形貌观察</div><div class="td act" style="flex:0 0 130px">通过 | 驳回</div></div>
+        <div class="tr"><div class="td">王五</div><div class="td w2">傅里叶红外光谱仪</div><div class="td">10-27 13:00</div><div class="td w2">结构表征</div><div class="td act" style="flex:0 0 130px">通过 | 驳回</div></div>
+      </div>
+      <p class="hint">驳回 → 弹窗：驳回理由（必填，2–100 字）</p>
+      <div class="table" style="margin-top:14px">
+        <div class="tr th"><div class="td w2">名称</div><div class="td">型号</div><div class="td">位置</div><div class="td">状态</div><div class="td act">操作</div></div>
+        <div class="tr"><div class="td w2">扫描电子显微镜</div><div class="td">SEM-2000</div><div class="td">A-301</div><div class="td">正常</div><div class="td act">编辑|停用|删除</div></div>
+        <div class="tr"><div class="td w2">＋ 新增仪器</div><div class="td">—</div><div class="td">—</div><div class="td">—</div><div class="td act">新增</div></div>
+      </div>
+    </div>
+    <ul class="notes">
+      <li>驳回必须填理由（需求硬性要求），空值不允许提交</li>
+      <li>台账新增/编辑共用弹窗表单：名称、型号、位置、可用时段、状态、备注</li>
+      <li>删除仪器二次确认，并提示会影响历史预约</li>
+      <li><b>已确认</b>：超管不设独立"用户管理页"，权限等同管理员；role 字段保留供后续扩展</li>
+    </ul>
+  </section>
+
+  <!-- 6 统计 -->
+  <section class="card">
+    <h2>6. 统计分析 <span class="tag">/statistics</span></h2>
+    <p class="who">管理员为主 · W9 六骨架 / W10 二接真实数据</p>
+    <div class="frame">
+      <div class="row" style="justify-content:space-between">
+        <div class="box" style="height:28px;min-width:120px">近 7 天 ▾</div>
+        <div class="box btn" style="height:28px;min-width:60px">导出</div>
+      </div>
+      <div class="cards4">
+        <div class="kpi"><b>80</b>总预约量</div>
+        <div class="kpi"><b>12</b>待审批</div>
+        <div class="kpi"><b>8</b>仪器总数</div>
+        <div class="kpi"><b>6</b>可用仪器</div>
+      </div>
+      <div class="chart" style="height:110px">近 7 天预约量 · 折线图</div>
+      <div class="chart" style="height:110px">仪器利用率 Top10 · 横向柱状图</div>
+      <div class="chart" style="height:110px">预约状态占比 · 饼图</div>
+    </div>
+    <ul class="notes">
+      <li>ECharts 三个图表，W9 六先用 Mock 数据渲染，W10 二只换数据源</li>
+      <li>空数据兜底"暂无数据"，不显示空白画布</li>
+      <li><b>已确认</b>：利用率 = 已预约时长 ÷ 可用总时长 × 100%，只计 APPROVED + COMPLETED</li>
+      <li>窗口 resize 时 resize()，路由离开时 dispose()</li>
+    </ul>
+  </section>
+
+</div>
+
+<section class="card" style="margin-top:18px">
+  <h2>全局布局 <span class="tag">/layout</span></h2>
+  <p class="who">登录后的公共外壳，菜单按角色过滤</p>
+  <div class="frame side">
+    <div class="nav">
+      <div class="on">仪器列表</div>
+      <div>预约申请</div>
+      <div>我的预约</div>
+      <div style="color:#c0c4cc">管理员面板（仅管理员可见）</div>
+      <div>统计分析</div>
+    </div>
+    <div class="main">
+      <div class="box" style="height:36px;margin-bottom:8px;justify-content:space-between">
+        <span>顶部：当前页标题 + Mock 模式标签</span>
+        <span>右侧：角色标签 · 用户名 · 退出登录</span>
+      </div>
+      <div class="chart" style="height:120px">主内容区（路由视图）</div>
+    </div>
+  </div>
+  <ul class="notes">
+    <li>学生看不到"管理员面板"菜单，直接输 URL 也会被路由守卫拦截并提示"无权限"</li>
+    <li>右上角展示角色标签：学生 / 实验室管理员 / 超级管理员</li>
+  </ul>
+</section>
+
+</body>
+</html>
