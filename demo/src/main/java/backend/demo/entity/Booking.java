@@ -41,5 +41,6 @@ public class Booking {
 
     private String rejectReason;
 
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createTime;
 }
