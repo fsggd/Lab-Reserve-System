@@ -74,7 +74,10 @@ router.beforeEach((to) => {
   const store = useUserStore()
   document.title = to.meta.title ? `${to.meta.title} - 实验室仪器预约系统` : '实验室仪器预约系统'
 
-  if (to.meta.public) return true
+  // 已登录时不再展示登录页，直接回到对应角色的工作台
+  if (to.meta.public) {
+    return to.path === '/login' && store.isLogin ? { path: store.homePath } : true
+  }
 
   if (!store.isLogin) {
     return { path: '/login', query: { redirect: to.fullPath } }
@@ -83,7 +86,7 @@ router.beforeEach((to) => {
   // 角色权限控制（前端拦截，后端仍需鉴权）
   if (to.meta.roles && !to.meta.roles.includes(store.role)) {
     ElMessage.error('当前角色无权访问该页面')
-    return { path: '/instruments' }
+    return { path: store.homePath }
   }
   return true
 })

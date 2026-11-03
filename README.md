@@ -7,7 +7,7 @@ Vue 3 + Element Plus + Axios，实验室仪器线上预约与审批系统的 MVP
 | 负责人 | 成员 B（前端 & 交互） |
 | 技术栈 | Vue 3.5 / Vite 6 / Element Plus 2.9 / Pinia / Vue Router 4 / Axios 1.7 / ECharts 5 |
 | 后端约定 | SpringBoot 3 + MyBatis-Plus，统一返回体 `{ code, message, data }`，JWT 鉴权 |
-| 当前进度 | **WBS 4.1 已完成**（工程搭建 + Axios 封装 + 页面草图） |
+| 当前进度 | **WBS 4.2 已完成**（工程搭建 + Axios 封装 + 页面草图 + 登录页与鉴权） |
 
 ---
 
@@ -40,16 +40,18 @@ lab-booking-frontend
 │   │   └── stats.js      #   统计
 │   ├── utils/
 │   │   ├── request.js    # ★ Axios 统一封装（JWT + 统一错误提示）
-│   │   └── auth.js       # token / 用户信息本地存取
+│   │   ├── auth.js       #   token / 用户信息本地存取（记住我 → localStorage）
+│   │   └── role.js       #   角色常量：默认工作台、角色中文名、管理员判定
 │   ├── mock/             # Mock 适配器（后端未就绪时独立开发用）
 │   │   ├── adapter.js    #   替换 axios adapter
 │   │   ├── routes.js     #   mock 路由表
-│   │   └── data.js       #   mock 数据
+│   │   ├── data.js       #   mock 数据
+│   │   └── accounts.js   #   mock 账号表 + 登录校验（纯函数，可单独自检）
 │   ├── stores/user.js    # Pinia：登录态与角色
 │   ├── router/index.js   # 路由 + 登录/角色守卫
 │   ├── layout/index.vue  # 侧边栏 + 顶栏布局（菜单按角色过滤）
 │   ├── components/       # 公共组件（PageSkeleton 草图占位）
-│   ├── views/            # 页面（WBS 4.1 为草图骨架，W8-W9 填充）
+│   ├── views/            # 页面（登录页已完成，其余 W9-W10 填充）
 │   └── styles/
 ├── docs/
 │   ├── api-contract.md   # ★ 前后端接口契约（发给成员 A 确认）
@@ -87,10 +89,12 @@ const { list, total } = await fetchInstruments({ status: 'NORMAL' })
 
 ## 4. Mock 模式
 
-`.env.development` 中 `VITE_USE_MOCK=true` 时，所有请求由 `src/mock/adapter.js` 拦截返回假数据，
-模拟延迟 200ms。**W10 联调时改为 `false` 即可切换到真实后端，业务代码零改动。**
+仓库已自带 `.env.development`（默认 `VITE_USE_MOCK=true`，克隆后无需配置即可跑通）。
+Mock 开启时所有请求由 `src/mock/adapter.js` 拦截返回假数据，模拟延迟 200ms。
+**联调时把 `VITE_USE_MOCK` 改为 `false` 并启动后端即可切换到真实接口，业务代码零改动。**
 
 mock 路由表在 `src/mock/routes.js`，数据与真实接口字段保持一致，页面开发阶段无需等待后端。
+错误形态同样按契约 v1.1 模拟（HTTP 200 + code 业务码），自测结果与联调后一致。
 
 ---
 
@@ -133,3 +137,27 @@ git commit -m "feat(scaffold): 搭建Vue3+ElementPlus工程，封装Axios统一�
 git push -u origin feature/fe-scaffold
 # 随后在 Gitee/GitHub 上向 dev 发起 PR，指定成员 C 评审
 ```
+
+---
+
+## 7. WBS 4.2 验收对照（登录页）
+
+| 验收标准 | 状态 | 证据 |
+|---|---|---|
+| 账号密码登录 | ✅ | `src/views/Login.vue`：账号/密码必填校验、格式校验、回车提交、防重复点击 |
+| 错误提示 | ✅ | 登录接口 `silent` 模式，错误统一在页面内 `el-alert` 展示，优先使用后端 message |
+| 按角色跳转工作台 | ✅ | `src/utils/role.js`：STUDENT → `/instruments`，ADMIN / SUPER_ADMIN → `/admin` |
+| token 存储 | ✅ | `src/utils/auth.js`：Pinia + localStorage（记住我）/ sessionStorage（不记住我），退出清除 |
+
+**Mock 自测账号**（`VITE_USE_MOCK=true` 时登录页底部可直接点击填充）：
+
+| 账号 | 密码 | 角色 | 登录后进 |
+|---|---|---|---|
+| student01 | 123456 | 学生 | 仪器列表 `/instruments` |
+| admin01 | 123456 | 实验室管理员 | 管理员面板 `/admin` |
+| root | 123456 | 超级管理员 | 管理员面板 `/admin`（与管理员一致） |
+
+**验收用例**
+
+- TC-01：输入正确账号密码 → 登录成功 → 跳转对应角色工作台 → 顶栏显示角色标签与姓名。
+- TC-02：账号不存在 / 密码错误 → 页面内红色提示「账号不存在」「用户名或密码错误」→ **不跳转**；空表单点击登录 → 输入框下方出现「请输入账号」「请输入密码」。

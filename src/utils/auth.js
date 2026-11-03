@@ -6,14 +6,11 @@
 const TOKEN_KEY = 'lab_token'
 const USER_KEY = 'lab_user'
 
-// 是否走 sessionStorage（"记住我"未勾选时使用）
-let useSession = false
-
-const storage = () => (useSession ? window.sessionStorage : window.localStorage)
-
-export function setStorageMode(remember) {
-  useSession = !remember
-}
+/**
+ * 存储策略由 setToken / setUser 的 remember 参数直接决定：
+ * remember=true → localStorage（记住我）；false → sessionStorage（关掉浏览器即失效）。
+ * 读取时两个 storage 都查，清除时两个都清，因此不需要额外的模式开关。
+ */
 
 export function getToken() {
   return (
@@ -60,7 +57,10 @@ export function parseJwt(token) {
   if (!token) return null
   try {
     const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
-    return JSON.parse(window.atob(base64))
+    // 补齐 padding：JWT payload 的 base64 通常省略 "="，长度非 4 的倍数时
+    // atob 会抛异常，导致有效 token 被误判为非法
+    const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=')
+    return JSON.parse(window.atob(padded))
   } catch {
     return null
   }
@@ -72,5 +72,3 @@ export function isTokenExpired(token) {
   // exp 单位秒
   return payload.exp * 1000 < Date.now()
 }
-
-export { storage }
