@@ -10,6 +10,8 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
  * 全局异常处理器
@@ -70,6 +72,20 @@ public class GlobalExceptionHandler {
     public R<Void> handleMethodNotSupported(HttpRequestMethodNotSupportedException e) {
         log.warn("请求方式不支持: {}", e.getMessage());
         return R.fail(ResultCode.METHOD_NOT_ALLOWED);
+    }
+
+    /** 接口路径不存在（Spring Boot 4 无处理器时抛出，落入兜底会误报 500） */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public R<Void> handleNoResourceFound(NoResourceFoundException e) {
+        log.warn("接口不存在: {} {}", e.getHttpMethod(), e.getResourcePath());
+        return R.fail(ResultCode.NOT_FOUND);
+    }
+
+    /** 接口路径不存在（兼容 throw-exception-if-no-handler-found=true 的旧行为） */
+    @ExceptionHandler(NoHandlerFoundException.class)
+    public R<Void> handleNoHandlerFound(NoHandlerFoundException e) {
+        log.warn("接口不存在: {} {}", e.getHttpMethod(), e.getRequestURL());
+        return R.fail(ResultCode.NOT_FOUND);
     }
 
     /** 兜底异常 */
