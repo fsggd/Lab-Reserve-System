@@ -80,9 +80,56 @@ export const mockRoutes = [
       return item
     }
   },
-  { method: 'post', path: '/instruments', handler: () => ({ id: Date.now() }) },
-  { method: 'put', path: '/instruments/:id', handler: () => ({ id: 1 }) },
-  { method: 'delete', path: '/instruments/:id', handler: () => true },
+  {
+    // 新增仪器：名称/型号/位置必填（管理员台账用）
+    method: 'post',
+    path: '/instruments',
+    handler: ({ body }) => {
+      const { name, model, location, availableStart, availableEnd, status, remark } = body || {}
+      if (!name?.trim() || !model?.trim() || !location?.trim()) {
+        return { status: 200, code: 400, message: '名称、型号、位置为必填项' }
+      }
+      const record = {
+        id: Math.max(...mockInstruments.map((i) => i.id)) + 1,
+        name: name.trim(),
+        model: model.trim(),
+        location: location.trim(),
+        availableStart: availableStart || '09:00',
+        availableEnd: availableEnd || '18:00',
+        status: status || 'NORMAL',
+        remark: remark || ''
+      }
+      mockInstruments.push(record)
+      return { id: record.id }
+    }
+  },
+  {
+    // 编辑仪器：按 id 部分更新
+    method: 'put',
+    path: '/instruments/:id',
+    handler: ({ params, body }) => {
+      const item = mockInstruments.find((i) => i.id === Number(params.id))
+      if (!item) {
+        return { status: 200, code: 404, message: '仪器不存在' }
+      }
+      const { id: _ignored, ...changes } = body || {}
+      Object.assign(item, changes)
+      return { id: item.id }
+    }
+  },
+  {
+    // 删除仪器：历史预约记录保留（仅移除台账）
+    method: 'delete',
+    path: '/instruments/:id',
+    handler: ({ params }) => {
+      const idx = mockInstruments.findIndex((i) => i.id === Number(params.id))
+      if (idx === -1) {
+        return { status: 200, code: 404, message: '仪器不存在' }
+      }
+      mockInstruments.splice(idx, 1)
+      return true
+    }
+  },
 
   // ---------- 预约 ----------
   {
