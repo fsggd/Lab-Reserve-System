@@ -85,9 +85,23 @@ export const mockRoutes = [
   { method: 'delete', path: '/instruments/:id', handler: () => true },
 
   // ---------- 预约 ----------
-  { method: 'get', path: '/bookings', handler: ({ query }) => paginate(mockBookings, query) },
-  // 与契约 v1.1 一致：返回 { list, total }；mock 同样按 token 过滤本人数据，与真实后端语义对齐
   {
+    // 管理员看全部：支持 status / instrumentId 过滤，返回 { list, total }
+    method: 'get',
+    path: '/bookings',
+    handler: ({ query }) => {
+      let data = mockBookings
+      if (query.status) {
+        data = data.filter((b) => b.status === query.status)
+      }
+      if (query.instrumentId) {
+        data = data.filter((b) => b.instrumentId === Number(query.instrumentId))
+      }
+      return paginate(data, query)
+    }
+  },
+  {
+    // 我的预约：按 token 过滤本人数据（契约 v1.1，{ list, total }）
     method: 'get',
     path: '/bookings/mine',
     handler: ({ query, headers }) => {
@@ -96,10 +110,104 @@ export const mockRoutes = [
       return paginate(mine, query)
     }
   },
-  { method: 'post', path: '/bookings', handler: () => ({ id: Date.now() }) },
-  { method: 'post', path: '/bookings/:id/approve', handler: () => true },
-  { method: 'post', path: '/bookings/:id/reject', handler: () => true },
-  { method: 'delete', path: '/bookings/:id', handler: () => true },
+  {
+    // 提交预约：校验仪器状态与时间，冲突返回 code:409（契约 v1.1 约定）
+    method: 'post',
+    path: '/bookings',
+    handler: ({ body, headers }) => {
+      const { instrumentId, startTime, endTime, purpose } = body || {}
+      const inst = mockInstruments.find((i) => i.id === Number(instrumentId))
+      if (!inst) {
+        return { status: 200, code: 404, message: '仪器不存在' }
+      }
+      if (inst.status !== 'NORMAL') {
+        return { status: 200, code: 400, message: '维修/停用仪器不可预约' }
+      }
+      if (!startTime || !endTime) {
+        return { status: 200, code: 400, message: '预约起止时间不能为空' }
+      }
+      if (endTime <= startTime) {
+        return { status: 200, code: 400, message: '结束时间必须晚于开始时间' }
+      }
+      // 时间冲突：与未取消的既有预约重叠即 409，前端拦截器统一提示
+      const conflict = mockBookings.some(
+        (b) =>
+          b.instrumentId === inst.id &&
+          ['PENDING', 'APPROVED', 'COMPLETED'].includes(b.status) &&
+          startTime < b.endTime &&
+          endTime > b.startTime
+      )
+      if (conflict) {
+        return { status: 200, code: 409, message: '该仪器在所选时段已被预约' }
+      }
+      const user = userFromToken(headers.Authorization)
+      const record = {
+        id: Math.max(...mockBookings.map((b) => b.id)) + 1,
+        instrumentId: inst.id,
+        instrumentName: inst.name,
+        userName: user?.realName || '张三',
+        startTime,
+        endTime,
+        purpose: (purpose || '').trim(),
+        status: 'PENDING'
+      }
+      mockBookings.push(record)
+      return { id: record.id }
+    }
+  },
+  {
+    // 审批通过：仅待审批记录可操作
+    method: 'post',
+    path: '/bookings/:id/approve',
+    handler: ({ params }) => {
+      const b = mockBookings.find((x) => x.id === Number(params.id))
+      if (!b) {
+        return { status: 200, code: 404, message: '预约记录不存在' }
+      }
+      if (b.status !== 'PENDING') {
+        return { status: 200, code: 400, message: '仅待审批记录可执行审批操作' }
+      }
+      b.status = 'APPROVED'
+      return true
+    }
+  },
+  {
+    // 驳回：reason 必填（WBS 4.5 验收点），成功后记录驳回理由
+    method: 'post',
+    path: '/bookings/:id/reject',
+    handler: ({ params, body }) => {
+      const b = mockBookings.find((x) => x.id === Number(params.id))
+      if (!b) {
+        return { status: 200, code: 404, message: '预约记录不存在' }
+      }
+      if (b.status !== 'PENDING') {
+        return { status: 200, code: 400, message: '仅待审批记录可执行审批操作' }
+      }
+      const reason = (body?.reason || '').trim()
+      if (!reason) {
+        return { status: 200, code: 400, message: '驳回理由不能为空' }
+      }
+      b.status = 'REJECTED'
+      b.rejectReason = reason
+      return true
+    }
+  },
+  {
+    // 取消预约：仅待审批/已通过可取消，取消后保留记录（状态置 CANCELLED）
+    method: 'delete',
+    path: '/bookings/:id',
+    handler: ({ params }) => {
+      const b = mockBookings.find((x) => x.id === Number(params.id))
+      if (!b) {
+        return { status: 200, code: 404, message: '预约记录不存在' }
+      }
+      if (!['PENDING', 'APPROVED'].includes(b.status)) {
+        return { status: 200, code: 400, message: '当前状态不可取消' }
+      }
+      b.status = 'CANCELLED'
+      return true
+    }
+  },
 
   // ---------- 统计 ----------
   { method: 'get', path: '/stats/overview', handler: () => mockStats },
