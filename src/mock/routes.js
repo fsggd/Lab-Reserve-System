@@ -51,8 +51,35 @@ export const mockRoutes = [
   { method: 'post', path: '/auth/logout', handler: () => true },
 
   // ---------- 仪器 ----------
-  { method: 'get', path: '/instruments', handler: ({ query }) => paginate(mockInstruments, query) },
-  { method: 'get', path: '/instruments/:id', handler: () => mockInstruments[0] },
+  {
+    // 契约 v1.1：支持 name 模糊匹配 + status 精确筛选，返回 { list, total }
+    method: 'get',
+    path: '/instruments',
+    handler: ({ query }) => {
+      let data = mockInstruments
+      if (query.name) {
+        const kw = String(query.name).trim().toLowerCase()
+        data = data.filter(
+          (i) => i.name.toLowerCase().includes(kw) || i.model.toLowerCase().includes(kw)
+        )
+      }
+      if (query.status) {
+        data = data.filter((i) => i.status === query.status)
+      }
+      return paginate(data, query)
+    }
+  },
+  {
+    method: 'get',
+    path: '/instruments/:id',
+    handler: ({ params }) => {
+      const item = mockInstruments.find((i) => i.id === Number(params.id))
+      if (!item) {
+        return { status: 200, code: 404, message: '仪器不存在' }
+      }
+      return item
+    }
+  },
   { method: 'post', path: '/instruments', handler: () => ({ id: Date.now() }) },
   { method: 'put', path: '/instruments/:id', handler: () => ({ id: 1 }) },
   { method: 'delete', path: '/instruments/:id', handler: () => true },
