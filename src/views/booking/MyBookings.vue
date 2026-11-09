@@ -135,6 +135,8 @@ async function loadList() {
     })
     list.value = data.list || []
     total.value = data.total || 0
+  } catch {
+    // 错误已由拦截器统一提示
   } finally {
     loading.value = false
   }
@@ -161,9 +163,14 @@ async function onCancel(row) {
   } catch {
     return
   }
-  await cancelBooking(row.id)
-  ElMessage.success('预约已取消')
-  loadList()
+  try {
+    await cancelBooking(row.id)
+    ElMessage.success('预约已取消')
+    detailVisible.value = false
+    loadList()
+  } catch {
+    // 错误已由拦截器统一提示
+  }
 }
 
 function showDetail(row) {

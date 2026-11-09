@@ -161,12 +161,17 @@ function buildEmptyOption() {
 }
 
 async function loadStats() {
-  const data = await fetchStatsOverview()
-  stats.value = data
+  try {
+    const data = await fetchStatsOverview()
+    stats.value = data
+  } catch {
+    // 接口失败已由拦截器统一提示，图表保持「暂无数据」
+    stats.value = null
+  }
 
-  const trend = data?.bookingTrend || []
-  const util = data?.utilization || []
-  const ratio = data?.statusRatio || []
+  const trend = stats.value?.bookingTrend || []
+  const util = stats.value?.utilization || []
+  const ratio = stats.value?.statusRatio || []
 
   mountChart(trendRef.value, trend.length ? buildTrendOption(trend) : buildEmptyOption())
   mountChart(utilRef.value, util.length ? buildUtilOption(util) : buildEmptyOption())

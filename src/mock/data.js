@@ -22,14 +22,14 @@ export const mockInstruments = [
 ]
 
 export const mockBookings = [
-  { id: 101, instrumentId: 1, instrumentName: '扫描电子显微镜', userName: '张三', startTime: '2026-10-26 09:00', endTime: '2026-10-26 11:00', purpose: '材料表面形貌观察', status: 'PENDING' },
-  { id: 102, instrumentId: 2, instrumentName: '高效液相色谱仪', userName: '张三', startTime: '2026-10-24 14:00', endTime: '2026-10-24 17:00', purpose: '药物含量测定', status: 'APPROVED' },
-  { id: 103, instrumentId: 4, instrumentName: '冷冻离心机', userName: '李四', startTime: '2026-10-23 10:00', endTime: '2026-10-23 11:30', purpose: '血清分离', status: 'REJECTED', rejectReason: '与课题组测试冲突' },
-  { id: 104, instrumentId: 5, instrumentName: '傅里叶红外光谱仪', userName: '王五', startTime: '2026-10-22 13:00', endTime: '2026-10-22 15:00', purpose: '聚合物结构表征', status: 'APPROVED' },
-  { id: 105, instrumentId: 1, instrumentName: '扫描电子显微镜', userName: '赵六', startTime: '2026-10-21 15:00', endTime: '2026-10-21 18:00', purpose: '纳米颗粒观测', status: 'COMPLETED' },
-  { id: 106, instrumentId: 7, instrumentName: '超净工作台', userName: '张三', startTime: '2026-10-20 09:00', endTime: '2026-10-20 12:00', purpose: '细胞培养', status: 'CANCELLED' },
-  { id: 107, instrumentId: 8, instrumentName: '恒温恒湿培养箱', userName: '孙七', startTime: '2026-10-19 08:00', endTime: '2026-10-22 08:00', purpose: '菌种培养', status: 'APPROVED' },
-  { id: 108, instrumentId: 2, instrumentName: '高效液相色谱仪', userName: '周八', startTime: '2026-10-18 09:30', endTime: '2026-10-18 12:00', purpose: '毕业设计实验', status: 'COMPLETED' }
+  { id: 101, instrumentId: 1, instrumentName: '扫描电子显微镜', userName: '张三', startTime: '2026-10-26 09:00:00', endTime: '2026-10-26 11:00:00', purpose: '材料表面形貌观察', status: 'PENDING' },
+  { id: 102, instrumentId: 2, instrumentName: '高效液相色谱仪', userName: '张三', startTime: '2026-10-24 14:00:00', endTime: '2026-10-24 17:00:00', purpose: '药物含量测定', status: 'APPROVED' },
+  { id: 103, instrumentId: 4, instrumentName: '冷冻离心机', userName: '李四', startTime: '2026-10-23 10:00:00', endTime: '2026-10-23 11:30:00', purpose: '血清分离', status: 'REJECTED', rejectReason: '与课题组测试冲突' },
+  { id: 104, instrumentId: 5, instrumentName: '傅里叶红外光谱仪', userName: '王五', startTime: '2026-10-22 13:00:00', endTime: '2026-10-22 15:00:00', purpose: '聚合物结构表征', status: 'APPROVED' },
+  { id: 105, instrumentId: 1, instrumentName: '扫描电子显微镜', userName: '赵六', startTime: '2026-10-21 15:00:00', endTime: '2026-10-21 18:00:00', purpose: '纳米颗粒观测', status: 'COMPLETED' },
+  { id: 106, instrumentId: 7, instrumentName: '超净工作台', userName: '张三', startTime: '2026-10-20 09:00:00', endTime: '2026-10-20 12:00:00', purpose: '细胞培养', status: 'CANCELLED' },
+  { id: 107, instrumentId: 8, instrumentName: '恒温恒湿培养箱', userName: '孙七', startTime: '2026-10-19 08:00:00', endTime: '2026-10-22 08:00:00', purpose: '菌种培养', status: 'APPROVED' },
+  { id: 108, instrumentId: 2, instrumentName: '高效液相色谱仪', userName: '周八', startTime: '2026-10-18 09:30:00', endTime: '2026-10-18 12:00:00', purpose: '毕业设计实验', status: 'COMPLETED' }
 ]
 
 export const mockStats = {

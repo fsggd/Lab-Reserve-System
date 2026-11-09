@@ -19,6 +19,16 @@ function paginate(list, query = {}) {
   return { list: list.slice(start, start + pageSize), total: list.length }
 }
 
+/** 无有效 token 时返回 401 统一错误体（与真实后端拦截器语义一致） */
+function unauthorized() {
+  return { status: 200, code: 401, message: '未登录或登录已过期' }
+}
+
+/** 仅管理员可操作（ADMIN / SUPER_ADMIN，决策①） */
+function isAdmin(user) {
+  return ['ADMIN', 'SUPER_ADMIN'].includes(user?.role)
+}
+
 export const mockRoutes = [
   // ---------- 认证 ----------
   {
@@ -162,6 +172,10 @@ export const mockRoutes = [
     method: 'post',
     path: '/bookings',
     handler: ({ body, headers }) => {
+      const user = userFromToken(headers.Authorization)
+      if (!user) {
+        return unauthorized()
+      }
       const { instrumentId, startTime, endTime, purpose } = body || {}
       const inst = mockInstruments.find((i) => i.id === Number(instrumentId))
       if (!inst) {
@@ -187,12 +201,11 @@ export const mockRoutes = [
       if (conflict) {
         return { status: 200, code: 409, message: '该仪器在所选时段已被预约' }
       }
-      const user = userFromToken(headers.Authorization)
       const record = {
         id: Math.max(...mockBookings.map((b) => b.id)) + 1,
         instrumentId: inst.id,
         instrumentName: inst.name,
-        userName: user?.realName || '张三',
+        userName: user.realName,
         startTime,
         endTime,
         purpose: (purpose || '').trim(),
@@ -203,10 +216,17 @@ export const mockRoutes = [
     }
   },
   {
-    // 审批通过：仅待审批记录可操作
+    // 审批通过：仅管理员、仅待审批记录可操作（与真实后端鉴权语义对齐）
     method: 'post',
     path: '/bookings/:id/approve',
-    handler: ({ params }) => {
+    handler: ({ params, headers }) => {
+      const user = userFromToken(headers.Authorization)
+      if (!user) {
+        return unauthorized()
+      }
+      if (!isAdmin(user)) {
+        return { status: 200, code: 403, message: '没有操作权限' }
+      }
       const b = mockBookings.find((x) => x.id === Number(params.id))
       if (!b) {
         return { status: 200, code: 404, message: '预约记录不存在' }
@@ -219,10 +239,17 @@ export const mockRoutes = [
     }
   },
   {
-    // 驳回：reason 必填（WBS 4.5 验收点），成功后记录驳回理由
+    // 驳回：仅管理员；reason 必填（WBS 4.5 验收点），成功后记录驳回理由
     method: 'post',
     path: '/bookings/:id/reject',
-    handler: ({ params, body }) => {
+    handler: ({ params, body, headers }) => {
+      const user = userFromToken(headers.Authorization)
+      if (!user) {
+        return unauthorized()
+      }
+      if (!isAdmin(user)) {
+        return { status: 200, code: 403, message: '没有操作权限' }
+      }
       const b = mockBookings.find((x) => x.id === Number(params.id))
       if (!b) {
         return { status: 200, code: 404, message: '预约记录不存在' }
@@ -240,13 +267,20 @@ export const mockRoutes = [
     }
   },
   {
-    // 取消预约：仅待审批/已通过可取消，取消后保留记录（状态置 CANCELLED）
+    // 取消预约：本人或管理员；仅待审批/已通过可取消，取消后保留记录（状态置 CANCELLED）
     method: 'delete',
     path: '/bookings/:id',
-    handler: ({ params }) => {
+    handler: ({ params, headers }) => {
+      const user = userFromToken(headers.Authorization)
+      if (!user) {
+        return unauthorized()
+      }
       const b = mockBookings.find((x) => x.id === Number(params.id))
       if (!b) {
         return { status: 200, code: 404, message: '预约记录不存在' }
+      }
+      if (b.userName !== user.realName && !isAdmin(user)) {
+        return { status: 200, code: 403, message: '无权取消该预约' }
       }
       if (!['PENDING', 'APPROVED'].includes(b.status)) {
         return { status: 200, code: 400, message: '当前状态不可取消' }

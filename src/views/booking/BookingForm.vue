@@ -53,7 +53,7 @@
             range-separator="至"
             start-placeholder="开始时间"
             end-placeholder="结束时间"
-            value-format="YYYY-MM-DD HH:mm"
+            value-format="YYYY-MM-DD HH:mm:ss"
             format="YYYY-MM-DD HH:mm"
             :disabled-date="disabledDate"
             style="width: 100%"
@@ -172,6 +172,8 @@ async function loadInstruments() {
   if (preset && instruments.value.some((i) => i.id === preset && isBookable(i))) {
     form.instrumentId = preset
   }
+  // 页面加载完成后记录初始快照，离开拦截只对"加载之后"的改动生效
+  initialSnapshot = JSON.stringify([form.instrumentId, form.timeRange, form.purpose])
 }
 
 async function onSubmit() {
@@ -210,7 +212,6 @@ function goBack() {
 /** 有未提交内容时离开页面需二次确认 */
 onBeforeRouteLeave(async () => {
   const snapshot = JSON.stringify([form.instrumentId, form.timeRange, form.purpose])
-  if (!initialSnapshot) initialSnapshot = snapshot
   if (snapshot === initialSnapshot || !form.instrumentId) return true
   try {
     await ElMessageBox.confirm('当前填写内容尚未提交，确定离开吗？', '提示', {

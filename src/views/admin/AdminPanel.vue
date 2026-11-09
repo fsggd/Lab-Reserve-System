@@ -205,23 +205,19 @@
           <el-input v-model="instrumentForm.location" maxlength="50" placeholder="如：实验楼A-301" />
         </el-form-item>
         <el-form-item label="可用时段" required>
-          <el-time-select
+          <el-time-picker
             v-model="instrumentForm.availableStart"
-            :max-time="instrumentForm.availableEnd"
-            start="00:00"
-            step="00:30"
-            end="23:59"
-            placeholder="开始"
+            format="HH:mm"
+            value-format="HH:mm"
+            placeholder="开始时间"
             style="width: 46%"
           />
           <span style="margin: 0 6px">至</span>
-          <el-time-select
+          <el-time-picker
             v-model="instrumentForm.availableEnd"
-            :min-time="instrumentForm.availableStart"
-            start="00:00"
-            step="00:30"
-            end="23:59"
-            placeholder="结束"
+            format="HH:mm"
+            value-format="HH:mm"
+            placeholder="结束时间"
             style="width: 46%"
           />
         </el-form-item>
@@ -302,6 +298,8 @@ async function loadBookings() {
     })
     bookingList.value = data.list || []
     bookingTotal.value = data.total || 0
+  } catch {
+    // 错误已由拦截器统一提示
   } finally {
     bookingLoading.value = false
   }
@@ -322,9 +320,13 @@ async function onApprove(row) {
   } catch {
     return
   }
-  await approveBooking(row.id)
-  ElMessage.success(`预约 #${row.id} 已通过`)
-  loadBookings()
+  try {
+    await approveBooking(row.id)
+    ElMessage.success(`预约 #${row.id} 已通过`)
+    loadBookings()
+  } catch {
+    // 错误已由拦截器统一提示
+  }
 }
 
 function openRejectDialog(row) {
@@ -367,10 +369,18 @@ async function onBatchApprove() {
   }
   batchLoading.value = true
   try {
+    let ok = 0
     for (const id of ids) {
-      await approveBooking(id)
+      try {
+        await approveBooking(id)
+        ok++
+      } catch {
+        // 单条失败已由拦截器提示，继续处理其余条目
+      }
     }
-    ElMessage.success(`已批量通过 ${ids.length} 条预约`)
+    if (ok > 0) {
+      ElMessage.success(`已批量通过 ${ok}/${ids.length} 条预约`)
+    }
     loadBookings()
   } finally {
     batchLoading.value = false
@@ -405,8 +415,6 @@ const instrumentRules = {
   name: [{ required: true, message: '请填写仪器名称', trigger: 'blur' }],
   model: [{ required: true, message: '请填写型号', trigger: 'blur' }],
   location: [{ required: true, message: '请填写位置', trigger: 'blur' }],
-  availableStart: [{ required: true, message: '请选择开放开始时间', trigger: 'change' }],
-  availableEnd: [{ required: true, message: '请选择开放结束时间', trigger: 'change' }],
   status: [{ required: true, message: '请选择状态', trigger: 'change' }]
 }
 
@@ -420,6 +428,8 @@ async function loadInstruments() {
     })
     instrumentList.value = data.list || []
     instrumentTotal.value = data.total || 0
+  } catch {
+    // 错误已由拦截器统一提示
   } finally {
     instrumentLoading.value = false
   }
@@ -448,6 +458,15 @@ async function onSaveInstrument() {
   try {
     await instrumentFormRef.value.validate()
   } catch {
+    return
+  }
+  // 可用时段手动校验（time-picker 不再由 rules 绑定）
+  if (!instrumentForm.availableStart || !instrumentForm.availableEnd) {
+    ElMessage.error('请选择可用时段')
+    return
+  }
+  if (instrumentForm.availableEnd <= instrumentForm.availableStart) {
+    ElMessage.error('结束时间必须晚于开始时间')
     return
   }
   instrumentSubmitting.value = true
@@ -480,9 +499,13 @@ async function onDeleteInstrument(row) {
   } catch {
     return
   }
-  await deleteInstrument(row.id)
-  ElMessage.success('仪器已删除')
-  loadInstruments()
+  try {
+    await deleteInstrument(row.id)
+    ElMessage.success('仪器已删除')
+    loadInstruments()
+  } catch {
+    // 409（存在有效预约）等错误已由拦截器统一提示
+  }
 }
 
 onMounted(() => {

@@ -147,6 +147,8 @@ async function loadList() {
     })
     list.value = data.list || []
     total.value = data.total || 0
+  } catch {
+    // 错误已由拦截器统一提示
   } finally {
     loading.value = false
   }
