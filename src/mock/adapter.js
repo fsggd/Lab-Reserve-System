@@ -33,11 +33,18 @@ export const mockAdapter = async (config) => {
     }
   }
 
-  const route = mockRoutes.find(
-    (r) =>
-      r.method.toLowerCase() === method &&
-      matchPath(r.path, path)
-  )
+  // 匹配路由并提取路径参数（如 /instruments/:id → { id: '3' }）
+  let route = null
+  let matchedParams = {}
+  for (const r of mockRoutes) {
+    if (r.method.toLowerCase() !== method) continue
+    const params = matchPath(r.path, path)
+    if (params) {
+      route = r
+      matchedParams = params
+      break
+    }
+  }
 
   if (!route) {
     return buildResponse(
@@ -47,7 +54,14 @@ export const mockAdapter = async (config) => {
     )
   }
 
-  const result = route.handler({ query, body, path, method, headers: config.headers || {} })
+  const result = route.handler({
+    query,
+    body,
+    params: matchedParams,
+    path,
+    method,
+    headers: config.headers || {}
+  })
 
   // handler 可直接返回 data（默认成功），也可返回 { status, code, message, data }
   if (result && typeof result === 'object' && ('status' in result || 'code' in result)) {
@@ -65,8 +79,16 @@ export const mockAdapter = async (config) => {
 function matchPath(pattern, actual) {
   const p = pattern.split('/').filter(Boolean)
   const a = actual.split('/').filter(Boolean)
-  if (p.length !== a.length) return false
-  return p.every((seg, i) => seg.startsWith(':') || seg === a[i])
+  if (p.length !== a.length) return null
+  const params = {}
+  const ok = p.every((seg, i) => {
+    if (seg.startsWith(':')) {
+      params[seg.slice(1)] = a[i]
+      return true
+    }
+    return seg === a[i]
+  })
+  return ok ? params : null
 }
 
 function buildResponse(config, status, body) {

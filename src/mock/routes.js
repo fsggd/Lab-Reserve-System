@@ -19,6 +19,16 @@ function paginate(list, query = {}) {
   return { list: list.slice(start, start + pageSize), total: list.length }
 }
 
+/** 无有效 token 时返回 401 统一错误体（与真实后端拦截器语义一致） */
+function unauthorized() {
+  return { status: 200, code: 401, message: '未登录或登录已过期' }
+}
+
+/** 仅管理员可操作（ADMIN / SUPER_ADMIN，决策①） */
+function isAdmin(user) {
+  return ['ADMIN', 'SUPER_ADMIN'].includes(user?.role)
+}
+
 export const mockRoutes = [
   // ---------- 认证 ----------
   {
@@ -51,16 +61,104 @@ export const mockRoutes = [
   { method: 'post', path: '/auth/logout', handler: () => true },
 
   // ---------- 仪器 ----------
-  { method: 'get', path: '/instruments', handler: ({ query }) => paginate(mockInstruments, query) },
-  { method: 'get', path: '/instruments/:id', handler: () => mockInstruments[0] },
-  { method: 'post', path: '/instruments', handler: () => ({ id: Date.now() }) },
-  { method: 'put', path: '/instruments/:id', handler: () => ({ id: 1 }) },
-  { method: 'delete', path: '/instruments/:id', handler: () => true },
+  {
+    // 契约 v1.1：支持 name 模糊匹配 + status 精确筛选，返回 { list, total }
+    method: 'get',
+    path: '/instruments',
+    handler: ({ query }) => {
+      let data = mockInstruments
+      if (query.name) {
+        const kw = String(query.name).trim().toLowerCase()
+        data = data.filter(
+          (i) => i.name.toLowerCase().includes(kw) || i.model.toLowerCase().includes(kw)
+        )
+      }
+      if (query.status) {
+        data = data.filter((i) => i.status === query.status)
+      }
+      return paginate(data, query)
+    }
+  },
+  {
+    method: 'get',
+    path: '/instruments/:id',
+    handler: ({ params }) => {
+      const item = mockInstruments.find((i) => i.id === Number(params.id))
+      if (!item) {
+        return { status: 200, code: 404, message: '仪器不存在' }
+      }
+      return item
+    }
+  },
+  {
+    // 新增仪器：名称/型号/位置必填（管理员台账用）
+    method: 'post',
+    path: '/instruments',
+    handler: ({ body }) => {
+      const { name, model, location, availableStart, availableEnd, status, remark } = body || {}
+      if (!name?.trim() || !model?.trim() || !location?.trim()) {
+        return { status: 200, code: 400, message: '名称、型号、位置为必填项' }
+      }
+      const record = {
+        id: Math.max(...mockInstruments.map((i) => i.id)) + 1,
+        name: name.trim(),
+        model: model.trim(),
+        location: location.trim(),
+        availableStart: availableStart || '09:00',
+        availableEnd: availableEnd || '18:00',
+        status: status || 'NORMAL',
+        remark: remark || ''
+      }
+      mockInstruments.push(record)
+      return { id: record.id }
+    }
+  },
+  {
+    // 编辑仪器：按 id 部分更新
+    method: 'put',
+    path: '/instruments/:id',
+    handler: ({ params, body }) => {
+      const item = mockInstruments.find((i) => i.id === Number(params.id))
+      if (!item) {
+        return { status: 200, code: 404, message: '仪器不存在' }
+      }
+      const { id: _ignored, ...changes } = body || {}
+      Object.assign(item, changes)
+      return { id: item.id }
+    }
+  },
+  {
+    // 删除仪器：历史预约记录保留（仅移除台账）
+    method: 'delete',
+    path: '/instruments/:id',
+    handler: ({ params }) => {
+      const idx = mockInstruments.findIndex((i) => i.id === Number(params.id))
+      if (idx === -1) {
+        return { status: 200, code: 404, message: '仪器不存在' }
+      }
+      mockInstruments.splice(idx, 1)
+      return true
+    }
+  },
 
   // ---------- 预约 ----------
-  { method: 'get', path: '/bookings', handler: ({ query }) => paginate(mockBookings, query) },
-  // 与契约 v1.1 一致：返回 { list, total }；mock 同样按 token 过滤本人数据，与真实后端语义对齐
   {
+    // 管理员看全部：支持 status / instrumentId 过滤，返回 { list, total }
+    method: 'get',
+    path: '/bookings',
+    handler: ({ query }) => {
+      let data = mockBookings
+      if (query.status) {
+        data = data.filter((b) => b.status === query.status)
+      }
+      if (query.instrumentId) {
+        data = data.filter((b) => b.instrumentId === Number(query.instrumentId))
+      }
+      return paginate(data, query)
+    }
+  },
+  {
+    // 我的预约：按 token 过滤本人数据（契约 v1.1，{ list, total }）
     method: 'get',
     path: '/bookings/mine',
     handler: ({ query, headers }) => {
@@ -69,10 +167,128 @@ export const mockRoutes = [
       return paginate(mine, query)
     }
   },
-  { method: 'post', path: '/bookings', handler: () => ({ id: Date.now() }) },
-  { method: 'post', path: '/bookings/:id/approve', handler: () => true },
-  { method: 'post', path: '/bookings/:id/reject', handler: () => true },
-  { method: 'delete', path: '/bookings/:id', handler: () => true },
+  {
+    // 提交预约：校验仪器状态与时间，冲突返回 code:409（契约 v1.1 约定）
+    method: 'post',
+    path: '/bookings',
+    handler: ({ body, headers }) => {
+      const user = userFromToken(headers.Authorization)
+      if (!user) {
+        return unauthorized()
+      }
+      const { instrumentId, startTime, endTime, purpose } = body || {}
+      const inst = mockInstruments.find((i) => i.id === Number(instrumentId))
+      if (!inst) {
+        return { status: 200, code: 404, message: '仪器不存在' }
+      }
+      if (inst.status !== 'NORMAL') {
+        return { status: 200, code: 400, message: '维修/停用仪器不可预约' }
+      }
+      if (!startTime || !endTime) {
+        return { status: 200, code: 400, message: '预约起止时间不能为空' }
+      }
+      if (endTime <= startTime) {
+        return { status: 200, code: 400, message: '结束时间必须晚于开始时间' }
+      }
+      // 时间冲突：与未取消的既有预约重叠即 409，前端拦截器统一提示
+      const conflict = mockBookings.some(
+        (b) =>
+          b.instrumentId === inst.id &&
+          ['PENDING', 'APPROVED', 'COMPLETED'].includes(b.status) &&
+          startTime < b.endTime &&
+          endTime > b.startTime
+      )
+      if (conflict) {
+        return { status: 200, code: 409, message: '该仪器在所选时段已被预约' }
+      }
+      const record = {
+        id: Math.max(...mockBookings.map((b) => b.id)) + 1,
+        instrumentId: inst.id,
+        instrumentName: inst.name,
+        userName: user.realName,
+        startTime,
+        endTime,
+        purpose: (purpose || '').trim(),
+        status: 'PENDING'
+      }
+      mockBookings.push(record)
+      return { id: record.id }
+    }
+  },
+  {
+    // 审批通过：仅管理员、仅待审批记录可操作（与真实后端鉴权语义对齐）
+    method: 'post',
+    path: '/bookings/:id/approve',
+    handler: ({ params, headers }) => {
+      const user = userFromToken(headers.Authorization)
+      if (!user) {
+        return unauthorized()
+      }
+      if (!isAdmin(user)) {
+        return { status: 200, code: 403, message: '没有操作权限' }
+      }
+      const b = mockBookings.find((x) => x.id === Number(params.id))
+      if (!b) {
+        return { status: 200, code: 404, message: '预约记录不存在' }
+      }
+      if (b.status !== 'PENDING') {
+        return { status: 200, code: 400, message: '仅待审批记录可执行审批操作' }
+      }
+      b.status = 'APPROVED'
+      return true
+    }
+  },
+  {
+    // 驳回：仅管理员；reason 必填（WBS 4.5 验收点），成功后记录驳回理由
+    method: 'post',
+    path: '/bookings/:id/reject',
+    handler: ({ params, body, headers }) => {
+      const user = userFromToken(headers.Authorization)
+      if (!user) {
+        return unauthorized()
+      }
+      if (!isAdmin(user)) {
+        return { status: 200, code: 403, message: '没有操作权限' }
+      }
+      const b = mockBookings.find((x) => x.id === Number(params.id))
+      if (!b) {
+        return { status: 200, code: 404, message: '预约记录不存在' }
+      }
+      if (b.status !== 'PENDING') {
+        return { status: 200, code: 400, message: '仅待审批记录可执行审批操作' }
+      }
+      const reason = (body?.reason || '').trim()
+      if (!reason) {
+        return { status: 200, code: 400, message: '驳回理由不能为空' }
+      }
+      b.status = 'REJECTED'
+      b.rejectReason = reason
+      return true
+    }
+  },
+  {
+    // 取消预约：本人或管理员；仅待审批/已通过可取消，取消后保留记录（状态置 CANCELLED）
+    method: 'delete',
+    path: '/bookings/:id',
+    handler: ({ params, headers }) => {
+      const user = userFromToken(headers.Authorization)
+      if (!user) {
+        return unauthorized()
+      }
+      const b = mockBookings.find((x) => x.id === Number(params.id))
+      if (!b) {
+        return { status: 200, code: 404, message: '预约记录不存在' }
+      }
+      if (b.userName !== user.realName && !isAdmin(user)) {
+        return { status: 200, code: 403, message: '无权取消该预约' }
+      }
+      if (!['PENDING', 'APPROVED'].includes(b.status)) {
+        return { status: 200, code: 400, message: '当前状态不可取消' }
+      }
+      b.status = 'CANCELLED'
+      return true
+    }
+  },
 
   // ---------- 统计 ----------
   { method: 'get', path: '/stats/overview', handler: () => mockStats },
